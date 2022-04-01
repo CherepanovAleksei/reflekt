@@ -17,10 +17,10 @@ version = "1.5.31"
 
 plugins {
     id("tanvd.kosogor") version "1.0.12" apply true
-    kotlin("jvm") version "1.5.31" apply true
+    kotlin("jvm") version "1.5.255-SNAPSHOT" apply true
     id("com.github.gmazzo.buildconfig") version "3.0.3" apply false
     `maven-publish`
-    kotlin("kapt") version "1.5.31" apply true
+    kotlin("kapt") version "1.5.255-SNAPSHOT" apply true
     id("org.jetbrains.dokka") version "1.6.10"
 }
 
@@ -38,6 +38,7 @@ allprojects {
     }
 
     repositories {
+        mavenLocal()
         mavenCentral()
         google()
         // Uncomment it for using the last kotlin compiler version

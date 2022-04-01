@@ -5,7 +5,7 @@ version = rootProject.version
 
 plugins {
     kotlin("kapt")
-    kotlin("plugin.serialization") version "1.5.31" apply true
+    kotlin("plugin.serialization") version "1.5.255-SNAPSHOT" apply true
 }
 
 dependencies {
@@ -32,6 +32,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter", "junit-jupiter-engine", "5.7.0")
     testImplementation("com.google.code.gson", "gson", "2.8.8")
     testImplementation("com.github.tschuchortdev", "kotlin-compile-testing", "1.4.5")
+    implementation("net.java.dev.jna:jna:5.9.0") // нужно для запуска тестов
+
 }
 
 tasks.withType<Test> {

@@ -7,6 +7,7 @@ include(":gradle-plugin")
 
 pluginManagement {
     repositories {
+        mavenLocal()
         gradlePluginPortal()
         jcenter()
         // Uncomment it for using the last kotlin compiler version
