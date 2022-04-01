@@ -4,12 +4,10 @@ import org.jetbrains.reflekt.util.file.getAllNestedFiles
 import org.jetbrains.kotlin.cli.common.arguments.parseCommandLineArguments
 import org.jetbrains.reflekt.plugin.analysis.getTestsDirectories
 import org.jetbrains.reflekt.plugin.ic.modification.Modification
-import org.jetbrains.reflekt.plugin.ic.modification.applyModifications
 import org.jetbrains.reflekt.plugin.util.Util
 import org.jetbrains.reflekt.plugin.util.Util.clear
 import org.jetbrains.reflekt.plugin.util.Util.getTempPath
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -37,7 +35,7 @@ class IncrementalCompilationTest {
     @Tag("ic")
     @MethodSource("data")
     @ParameterizedTest(name = "test {index}")
-    fun incrementalCompilationBaseTest(sourcesPath: File, modifications: List<Modification>, expectedResult: String?) {
+    fun incrementalCompilationTest(sourcesPath: File, modifications: List<Modification>, expectedResult: String?) {
         val testRoot = initTestRoot()
         val srcDir = File(testRoot, "src").apply { mkdirs() }
         val cacheDir = File(testRoot, "incremental-data").apply { mkdirs() }
@@ -49,27 +47,47 @@ class IncrementalCompilationTest {
         val pathToDownloadKotlinSources = File(testDataPath.parent, "kotlinSources").apply { mkdirs() }
         val compilerArgs = createCompilerArguments(outDir, srcDir, pathToDownloadKotlinSources).apply {
             parseCommandLineArguments(parseAdditionalCompilerArgs(srcDir, argumentsFileName), this)
+            pluginClasspaths = arrayOf(
+                File("build/libs").listFiles()?.singleOrNull { it.name.matches(Regex("reflekt-plugin-\\d\\.\\d{1,2}\\.\\d{1,3}\\.jar")) }?.absolutePath
+                    ?: fail("reflekt-plugin jar was not built for testing")
+            )
         }
-        compileSources(cacheDir, srcRoots, compilerArgs, "Initial")
-        // If expectedResult was not passed then the initial result should be the same
-        // with the result after sources modification
-        val realExpectedResult = expectedResult ?: runCompiledCode(outDir)
 
-        modifications.applyModifications()
-        compileSources(cacheDir, srcRoots, compilerArgs, "Modified")
-        val actualResult = runCompiledCode(outDir)
-        Assertions.assertEquals(realExpectedResult, actualResult, "Result after IC is incorrect")
+        val compiledFilesInitial = compileSources(cacheDir, srcRoots, compilerArgs, "Initial")
+        assert(compiledFilesInitial == setOf("definitions.kt", "dummy.kt", "Main.kt"))
+
+        val newFile = File(srcDir, "new.kt")
+        newFile.writeText(
+            """
+            package org.jetbrains.reflekt.plugin.ic.data.base_test
+            
+            @A
+            object D:B""".trimIndent()
+        )
+
+        val incCompiledFiles = compileSources(cacheDir, srcRoots, compilerArgs, "Modified")
+        assert(incCompiledFiles == setOf("definitions.kt", "Main.kt", newFile.name))
+
+        val actualResult = runCompiledCode(outDir, compilerArgs.classpath)
 
         // Compare the initial result and result without IC
         cacheDir.clear()
-        compileSources(cacheDir, srcRoots, compilerArgs, "Without IC")
-        val actualResultWithoutIC = runCompiledCode(outDir)
-        Assertions.assertEquals(realExpectedResult, actualResultWithoutIC, "The initial result and result after IC are different!")
+        val compiledFilesRebuild = compileSources(cacheDir, srcRoots, compilerArgs, "Without IC")
+        assert(compiledFilesRebuild == setOf("definitions.kt", "dummy.kt", "Main.kt", newFile.name))
+
+        val actualResultWithoutIC = runCompiledCode(outDir, compilerArgs.classpath)
+        Assertions.assertEquals(actualResult, actualResultWithoutIC, "The initial result and result after IC are different!")
 
         testRoot.deleteRecursively()
     }
 
-    private fun runCompiledCode(outDir: File) = Util.runProcessBuilder(Util.Command(listOf("java", getMainClass(outDir)), directory = outDir.absolutePath))
+    private fun runCompiledCode(outDir: File, classpath: String? = null): String {
+        val classpathProperty = if (classpath != null) listOf("-classpath", "${outDir.absolutePath}:$classpath") else listOf()
+        val commands = listOf("java") + classpathProperty + listOf(getMainClass(outDir))
+        return Util.runProcessBuilder(
+            Util.Command(commands, directory = outDir.absolutePath)
+        )
+    }
 
     // Find [mainFileName]Kt.class file in [outDir] and make the following transformations:
     //  - сut <class> extension

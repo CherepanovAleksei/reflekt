@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.com.intellij.openapi.project.Project
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
+import org.jetbrains.kotlin.incremental.components.ReflektTracker
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.BindingTrace
 import org.jetbrains.kotlin.resolve.jvm.extensions.AnalysisHandlerExtension
@@ -27,6 +28,7 @@ class ReflektModuleAnalysisExtension(
     private val reflektMetaFile: File?,
     private val reflektContext: IrReflektContext? = null,
     private val messageCollector: MessageCollector? = null,
+    private val tracker: ReflektTracker? = null
 ) : AnalysisHandlerExtension {
     private val reflektPackage = "org.jetbrains.reflekt"
 
@@ -40,6 +42,7 @@ class ReflektModuleAnalysisExtension(
         (module as? ModuleDescriptorImpl) ?: error("Internal error! Can not cast a ModuleDescriptor to ModuleDescriptorImpl")
         val externalLibrariesAnalyzer = ExternalLibrariesAnalyzer(reflektMetaFilesFromLibraries, module, messageCollector)
 
+        reportICTracker(files)
         val setOfFiles = files.filter { it.packageFqName.asString() != reflektPackage }.toSet()
         val analyzer = ReflektAnalyzer(setOfFiles, bindingTrace.bindingContext, messageCollector)
         val invokes = analyzer.invokes()
@@ -75,6 +78,18 @@ class ReflektModuleAnalysisExtension(
         messageCollector?.log("Finish analysis with ReflektModuleAnalysisExtension")
 
         return super.analysisCompleted(project, module, bindingTrace, files)
+    }
+
+    private fun reportICTracker(files: Collection<KtFile>) {
+        //TODO: remove hardcode, setup good reporting
+        fun findFile(name: String)  = files.singleOrNull { it.name == name }?.let { File(it.virtualFilePath) }?.takeIf { it.exists() }
+        val main = findFile("Main.kt") ?: return
+        val aKt = findFile("definitions.kt") ?: return
+        val newKt = findFile("new.kt")
+        tracker?.report(aKt, main)
+        if (newKt != null) {
+            tracker?.report(newKt, main)
+        }
     }
 
     private fun toGenerateReflektImpl(libraryInvokes: ReflektInvokes) = libraryInvokes.isNotEmpty()

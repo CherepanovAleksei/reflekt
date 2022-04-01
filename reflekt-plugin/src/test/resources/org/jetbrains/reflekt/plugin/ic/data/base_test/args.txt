@@ -1,0 +1,8 @@
+-Xuse-ir
+-language-version
+1.5
+-api-version
+1.5
+-jvm-target
+11
+-no-reflect

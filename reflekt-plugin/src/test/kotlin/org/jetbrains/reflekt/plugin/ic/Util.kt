@@ -36,7 +36,8 @@ internal fun parseAdditionalCompilerArgs(testDir: File, argumentsFileName: Strin
         ?: emptyList()
 }
 
-internal fun compileSources(cacheDir: File, sources: List<File>, compilerArgs: K2JVMCompilerArguments, errorMessagePrefix: String) {
-    val (_, errors) = compile(cacheDir, sources, compilerArgs)
+internal fun compileSources(cacheDir: File, sources: List<File>, compilerArgs: K2JVMCompilerArguments, errorMessagePrefix: String): Set<String> {
+    val (_, errors, files) = compile(cacheDir, sources, compilerArgs)
     check(errors.isEmpty()) { "$errorMessagePrefix build failed: \n${errors.joinToString("\n")}" }
+    return files.map{ file -> file.name}.toSet()
 }

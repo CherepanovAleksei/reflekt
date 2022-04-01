@@ -9,6 +9,7 @@ class TestICReporter(private val isVerbose: Boolean = false) : ICReporterBase() 
         private set
 
     val icLogLines = arrayListOf<String>()
+    val compiledFiles = mutableSetOf<File>()
 
     override fun report(message: () -> String) {
         icLogLines.add(message())
@@ -22,5 +23,6 @@ class TestICReporter(private val isVerbose: Boolean = false) : ICReporterBase() 
 
     override fun reportCompileIteration(incremental: Boolean, sourceFiles: Collection<File>, exitCode: ExitCode) {
         this.exitCode = exitCode
+        compiledFiles.addAll(sourceFiles)
     }
 }

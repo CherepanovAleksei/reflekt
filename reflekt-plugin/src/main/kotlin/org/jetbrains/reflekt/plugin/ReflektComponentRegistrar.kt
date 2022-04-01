@@ -12,6 +12,7 @@ import com.google.auto.service.AutoService
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.com.intellij.mock.MockProject
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
+import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.resolve.jvm.extensions.AnalysisHandlerExtension
 
@@ -37,6 +38,7 @@ class ReflektComponentRegistrar(private val isTestConfiguration: Boolean = false
         val config = PluginConfig(configuration, isTestConfiguration = isTestConfiguration)
         val reflektContext = IrReflektContext()
 
+        val tracker = configuration.get(CommonConfigurationKeys.REFLEKT_TRACKER)
         configuration.messageCollector.log("PROJECT FILE PATH: ${project.projectFilePath}")
 
         // This will be called multiple times (for each project module),
@@ -50,6 +52,7 @@ class ReflektComponentRegistrar(private val isTestConfiguration: Boolean = false
                 reflektContext = reflektContext,
                 messageCollector = config.messageCollector,
                 reflektMetaFile = config.reflektMetaFileRelativePath?.let { File(it) },
+                tracker = tracker
             ),
         )
         IrGenerationExtension.registerExtension(
