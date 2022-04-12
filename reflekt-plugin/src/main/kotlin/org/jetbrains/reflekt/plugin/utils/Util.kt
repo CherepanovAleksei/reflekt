@@ -54,10 +54,12 @@ object Util {
     fun CompilerConfiguration.initMessageCollector(filePath: String) {
         val file = File(filePath)
         file.createNewFile()
-        this.put(
-            CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY,
-            PrintingMessageCollector(PrintStream(file.outputStream()), MessageRenderer.PLAIN_FULL_PATHS, true),
-        )
+        if (this.get(CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY) == null) {
+            this.put(
+                CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY,
+                PrintingMessageCollector(PrintStream(file.outputStream()), MessageRenderer.PLAIN_FULL_PATHS, true),
+            )
+        }
     }
 
     /**
